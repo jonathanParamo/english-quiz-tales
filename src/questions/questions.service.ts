@@ -68,6 +68,7 @@ export class QuestionsService {
     return this.questionModel.aggregate([
       { $match: { storyId: validId } },
       { $sample: { size: limit } },
+      { $project: { correctAnswers: 0 } },
     ]);
   }
 
@@ -77,13 +78,6 @@ export class QuestionsService {
     answers: any[],
     penalty = false,
   ) {
-    console.log('Recibido en gradeAndSave:', {
-      userId,
-      storyId,
-      answers,
-      penalty,
-    });
-
     let score = 0;
 
     for (const a of answers) {
@@ -102,7 +96,6 @@ export class QuestionsService {
       score,
       penalty,
     });
-    console.log(result);
     return { score, resultId: result._id };
   }
 

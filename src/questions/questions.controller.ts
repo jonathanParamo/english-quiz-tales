@@ -26,6 +26,30 @@ import { Model } from 'mongoose';
 import { GradeResultDto } from './grade-result.dto';
 import { ImageKitService } from 'src/common/imagekit.service';
 
+function isValidAnswer(type: string, selected: any): boolean {
+  if (
+    type === 'multiple' ||
+    type === 'true_false' ||
+    type === 'choose_correct_sentence'
+  ) {
+    return typeof selected === 'string' && selected.trim() !== '';
+  }
+
+  if (type === 'fill_blank' || type === 'write_sentence') {
+    return typeof selected === 'string' && selected.trim().length > 2;
+  }
+
+  if (type === 'matching') {
+    return (
+      Array.isArray(selected) &&
+      selected.length > 0 &&
+      selected.every((v) => typeof v === 'string' && v.trim() !== '')
+    );
+  }
+
+  return false;
+}
+
 @Controller('questions')
 @UseGuards(JwtAuthGuard)
 export class QuestionsController {
@@ -118,6 +142,7 @@ export class QuestionsController {
         selected: string;
         correct: boolean;
       }[] = [];
+      console.log(questions);
 
       const mappedAnswers = body.answers
         .map((userAnswer) => {
@@ -129,7 +154,11 @@ export class QuestionsController {
 
           if (!question) return null;
 
-          const correct = question.correctAnswer === userAnswer.selected;
+          const selected = userAnswer.selected;
+          if (!isValidAnswer(question.type, selected)) return null;
+
+          const correct = question.correctAnswer === selected;
+
           if (correct) {
             correctCount++;
             totalScore += question.points ?? 1;
@@ -139,15 +168,19 @@ export class QuestionsController {
 
           details.push({
             question: question.question,
-            correctAnswer: question.correctAnswer,
-            selected: userAnswer.selected,
+            correctAnswer: Array.isArray(question.correctAnswer)
+              ? question.correctAnswer.join(', ')
+              : question.correctAnswer,
+            selected: Array.isArray(selected)
+              ? selected.join(', ')
+              : selected || '',
             correct,
           });
 
           return {
             question: question._id,
-            selected: userAnswer.selected,
-            type: userAnswer,
+            selected,
+            type: question.type,
           };
         })
         .filter(Boolean);
@@ -176,6 +209,7 @@ export class QuestionsController {
         details,
       };
     } catch (error) {
+      console.log(error);
       throw error;
     }
   }

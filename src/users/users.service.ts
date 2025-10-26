@@ -1,9 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
-import { Response } from 'express';
+import { CreateUserDto } from './dto/create-user.dto';
 
 @Injectable()
 export class UsersService {
@@ -12,17 +12,19 @@ export class UsersService {
     private readonly jwtService: JwtService,
   ) {}
 
-  async create(userData: any, res: Response): Promise<any> {
-    if (!userData.password) {
-      throw new Error('Password is required');
+  async create(createUserDto: CreateUserDto): Promise<any> {
+    const { password, ...rest } = createUserDto;
+
+    if (!password) {
+      throw new BadRequestException('Password is required');
     }
 
-    const hashedPassword = await bcrypt.hash(userData.password, 10);
+    const hashedPassword = await bcrypt.hash(password, 10);
 
     const newUser = new this.userModel({
-      ...userData,
+      ...rest,
       password: hashedPassword,
-      role: userData.role ?? 'student',
+      role: createUserDto.role ?? 'student',
     });
 
     const savedUser = await newUser.save();
@@ -33,14 +35,7 @@ export class UsersService {
       role: savedUser.role,
     });
 
-    res.cookie('token', token, {
-      httpOnly: true,
-      secure: false,
-      sameSite: 'lax',
-      maxAge: 1000 * 60 * 60 * 24,
-    });
-
-    const { password, ...userWithoutPassword } = savedUser.toObject();
+    const { password: _, ...userWithoutPassword } = savedUser.toObject();
 
     return { user: userWithoutPassword, token };
   }
@@ -66,7 +61,8 @@ export class UsersService {
     const isMatch = await bcrypt.compare(password, user.password);
 
     if (isMatch) {
-      return user.toObject();
+      const { password: _, ...userWithoutPassword } = user.toObject();
+      return userWithoutPassword;
     }
     return null;
   }
