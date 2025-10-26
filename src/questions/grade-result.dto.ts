@@ -2,8 +2,8 @@ import {
   IsArray,
   IsBoolean,
   IsMongoId,
-  IsNumber,
   IsOptional,
+  IsString,
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
@@ -12,7 +12,11 @@ export class AnswerDto {
   @IsMongoId()
   questionId: string;
 
-  selected: string;
+  @IsString()
+  type: string;
+
+  @IsOptional()
+  selected?: string | string[];
 }
 
 export class GradeResultDto {
@@ -27,28 +31,4 @@ export class GradeResultDto {
   @IsBoolean()
   @IsOptional()
   penalty?: boolean;
-
-  @IsNumber()
-  @IsOptional()
-  score?: number;
-
-  @IsNumber()
-  @IsOptional()
-  correct?: number;
-
-  @IsNumber()
-  @IsOptional()
-  incorrect?: number;
-
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => AnswerDto)
-  @IsOptional()
-  details?: {
-    question: string;
-    correctAnswer: string;
-    selected: string;
-    correct: boolean;
-    type?: string;
-  }[];
 }

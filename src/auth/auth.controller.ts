@@ -10,6 +10,7 @@ import {
 import type { Request } from 'express';
 import { AuthService } from './auth.service';
 import type { Response } from 'express';
+import { LoginDto } from './dto/login.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -17,18 +18,20 @@ export class AuthController {
 
   @Post('login')
   async login(
-    @Body() body: { email: string; password: string },
+    @Body() loginDto: LoginDto,
     @Res({ passthrough: true }) res: Response,
   ) {
     const { access_token, user } = await this.authService.login(
-      body.email,
-      body.password,
+      loginDto.email,
+      loginDto.password,
     );
+
+    const isProd = process.env.NODE_ENV === 'production';
 
     res.cookie('token', access_token, {
       httpOnly: true,
-      sameSite: 'none',
-      secure: true,
+      sameSite: isProd ? 'none' : 'lax',
+      secure: isProd,
       maxAge: 1000 * 60 * 60 * 24,
     });
 

@@ -8,19 +8,21 @@ import {
   IsMongoId,
 } from 'class-validator';
 
+export const QuestionTypes = [
+  'multiple',
+  'true_false',
+  'fill_blank',
+  'listening',
+  'matching',
+  'choose_correct_sentence',
+] as const;
+
 export class CreateQuestionDto {
   @IsOptional()
   @IsMongoId()
   storyId?: string;
 
-  @IsIn([
-    'multiple',
-    'true_false',
-    'fill_blank',
-    'listening',
-    'matching',
-    'choose_correct_sentence',
-  ])
+  @IsIn(QuestionTypes)
   type: string;
 
   @IsArray()
@@ -38,11 +40,18 @@ export class CreateQuestionDto {
   options?: string[];
 
   @IsOptional()
-  correctAnswer: string | string[] | Record<string, any>;
+  @Transform(({ value }) => {
+    try {
+      return typeof value === 'string' ? JSON.parse(value) : value;
+    } catch {
+      return value;
+    }
+  })
+  correctAnswer?: string | string[] | Record<string, any>;
 
-  @IsNumber()
   @IsOptional()
   @Transform(({ value }) => Number(value))
+  @IsNumber({}, { message: 'Los puntos deben ser un número válido.' })
   points?: number;
 
   @IsString()
