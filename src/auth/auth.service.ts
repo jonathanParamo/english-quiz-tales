@@ -13,7 +13,16 @@ export class AuthService {
     const user = await this.usersService.validateUser(email, password);
     if (!user) throw new UnauthorizedException('Invalid credentials');
 
-    const payload = { sub: user._id, email: user.email, role: user.role };
+    return this.generateToken(user);
+  }
+
+  async generateToken(user: any): Promise<{ access_token: string; user: any }> {
+    const payload = {
+      sub: user._id,
+      email: user.email,
+      role: user.role,
+    };
+
     const access_token = this.jwtService.sign(payload);
 
     return {
@@ -22,12 +31,12 @@ export class AuthService {
     };
   }
 
-  validateToken(token: string): boolean {
+  validateToken(token: string): any | null {
     try {
       const decoded = this.jwtService.verify(token);
-      return true;
-    } catch (err) {
-      return false;
+      return decoded;
+    } catch {
+      return null;
     }
   }
 }

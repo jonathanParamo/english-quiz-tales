@@ -7,9 +7,8 @@ import {
   Res,
   UnauthorizedException,
 } from '@nestjs/common';
-import type { Request } from 'express';
+import type { Request, Response } from 'express';
 import { AuthService } from './auth.service';
-import type { Response } from 'express';
 import { LoginDto } from './dto/login.dto';
 
 @Controller('auth')
@@ -27,7 +26,6 @@ export class AuthController {
     );
 
     const isProd = process.env.NODE_ENV === 'production';
-
     res.cookie('token', access_token, {
       httpOnly: true,
       sameSite: isProd ? 'none' : 'lax',
@@ -41,12 +39,25 @@ export class AuthController {
   @Get('check')
   checkAuth(@Req() req: Request) {
     const token = req.cookies?.token;
-    const isValid = this.authService.validateToken(token);
+    const decoded = this.authService.validateToken(token);
 
-    if (!token || !isValid) {
+    if (!token || !decoded) {
       throw new UnauthorizedException('Not authenticated');
     }
 
-    return { status: 'ok' };
+    return {
+      status: 'ok',
+      user: {
+        id: decoded.sub,
+        email: decoded.email,
+        role: decoded.role,
+      },
+    };
+  }
+
+  @Post('logout')
+  logout(@Res({ passthrough: true }) res: Response) {
+    res.clearCookie('token');
+    return { message: 'Logged out successfully' };
   }
 }

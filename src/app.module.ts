@@ -8,6 +8,7 @@ import { StoriesModule } from './stories/stories.module';
 import { QuestionsModule } from './questions/questions.module';
 import { AuthModule } from './auth/auth.module';
 import { AnswerModule } from './answer/answer.module';
+import { AiModule } from './ai/ai.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { AnswerModule } from './answer/answer.module';
     QuestionsModule,
     AuthModule,
     AnswerModule,
+    AiModule,
   ],
   controllers: [AppController],
   providers: [AppService],

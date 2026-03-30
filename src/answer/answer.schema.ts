@@ -10,4 +10,5 @@ export const AnswerSchema = new Schema({
   answeredAt: { type: Date, default: Date.now },
   timeTakenMs: { type: Number },
   feedback: { type: String },
+  explanation: { type: String },
 });

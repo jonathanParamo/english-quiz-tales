@@ -8,6 +8,21 @@ import {
   IsMongoId,
 } from 'class-validator';
 
+export class AnswerDto {
+  @IsMongoId()
+  questionId: string;
+
+  @IsString()
+  @Transform(({ value }) => {
+    if (Array.isArray(value)) return value.join(',');
+    return value ?? '';
+  })
+  selected: string;
+}
+
+// ✅ FIX 3: 'write_sentence' agregado — estaba en el QuestionSchema pero no aquí.
+// Esto causaba que preguntas de tipo write_sentence fueran rechazadas por el DTO
+// con un error 400 silencioso antes de llegar al service.
 export const QuestionTypes = [
   'multiple',
   'true_false',
@@ -15,6 +30,7 @@ export const QuestionTypes = [
   'listening',
   'matching',
   'choose_correct_sentence',
+  'write_sentence', // ✅ agregado
 ] as const;
 
 export class CreateQuestionDto {
