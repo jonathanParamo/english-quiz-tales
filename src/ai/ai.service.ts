@@ -216,7 +216,6 @@ ${wrongs
       if (!jsonMatch) throw new Error('No JSON array found');
       return JSON.parse(jsonMatch[0]);
     } catch {
-      // Si el JSON falla igual devolvemos fallback útil
       return wrongs.map((w) => ({
         index: w.index,
         feedback: 'Not quite right, but keep trying!',
@@ -294,7 +293,6 @@ Explain this for a ${studentLevel} student.`;
   }
 
   async getGeneralFeedback(details: any[], studentLevel = 'beginner') {
-    // Si no hay details aún (array vacío) retornar fallback sin llamar a la API
     if (!details || details.length === 0) {
       return {
         strengths: 'Good effort!',
@@ -307,7 +305,6 @@ Explain this for a ${studentLevel} student.`;
     const total = details.length;
     const pct = Math.round((correct / total) * 100);
 
-    // Solo mandar las incorrectas al prompt para no gastar tokens
     const wrongOnes = details
       .filter((d) => !d.correct)
       .slice(0, 5)
