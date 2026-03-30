@@ -138,7 +138,6 @@ export class StoriesController {
 
   @Get(':id')
   async getStoryById(@Param('id') id: string) {
-    console.log(id);
     return this.storiesService.findById(id);
   }
 }

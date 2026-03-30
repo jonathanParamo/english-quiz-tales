@@ -129,87 +129,24 @@ export class QuestionsController {
   @UseGuards(JwtAuthGuard)
   async grade(@Req() req, @Body() body: GradeResultDto) {
     try {
-      const questions = await this.questionsService.findAllByStory(
-        body.storyId,
-      );
-
-      let totalScore = 0;
-      let correctCount = 0;
-      let incorrectCount = 0;
-      const details: {
-        question: string;
-        correctAnswer: string;
-        selected: string;
-        correct: boolean;
-      }[] = [];
-      console.log(questions);
-
-      const mappedAnswers = body.answers
-        .map((userAnswer) => {
-          const question = questions.find(
-            (q) =>
-              q._id.toString() === userAnswer.questionId ||
-              q.question.toString() === userAnswer.questionId,
-          );
-
-          if (!question) return null;
-
-          const selected = userAnswer.selected;
-          if (!isValidAnswer(question.type, selected)) return null;
-
-          const correct = question.correctAnswer === selected;
-
-          if (correct) {
-            correctCount++;
-            totalScore += question.points ?? 1;
-          } else {
-            incorrectCount++;
-          }
-
-          details.push({
-            question: question.question,
-            correctAnswer: Array.isArray(question.correctAnswer)
-              ? question.correctAnswer.join(', ')
-              : question.correctAnswer,
-            selected: Array.isArray(selected)
-              ? selected.join(', ')
-              : selected || '',
-            correct,
-          });
-
-          return {
-            question: question._id,
-            selected,
-            type: question.type,
-          };
-        })
-        .filter(Boolean);
-
-      if (body.penalty) {
-        totalScore = Math.max(0, totalScore - 2);
-      }
-
-      const result = await this.resultModel.create({
-        userId: req.user.id,
-        storyId: body.storyId,
-        answers: mappedAnswers,
-        score: totalScore,
-        correct: correctCount,
-        incorrect: incorrectCount,
-        penaltyApplied: body.penalty ?? false,
-        details,
-      });
+      const { result, score, total, details } =
+        await this.questionsService.gradeAndSave(
+          req.user.id,
+          body.storyId,
+          body.answers,
+          body.penalty ?? false,
+        );
 
       return {
         resultId: result._id,
-        totalScore,
-        correct: correctCount,
-        incorrect: incorrectCount,
-        maxScore: questions.reduce((sum, q) => sum + (q.points ?? 1), 0),
+        totalScore: score,
+        correct: details.filter((d) => d.correct).length,
+        incorrect: details.filter((d) => !d.correct).length,
+        maxScore: total,
         details,
       };
     } catch (error) {
-      console.log(error);
+      console.error('❌ Error en grade:', error);
       throw error;
     }
   }

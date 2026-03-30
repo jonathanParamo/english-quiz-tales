@@ -6,7 +6,7 @@ import {
   IsString,
   ValidateNested,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer';
 
 export class AnswerDto {
   @IsMongoId()
@@ -15,8 +15,14 @@ export class AnswerDto {
   @IsString()
   type: string;
 
-  @IsOptional()
-  selected?: string | string[];
+  @IsString()
+  @Transform(({ value }) => {
+    if (Array.isArray(value)) {
+      return value.join(',');
+    }
+    return value ?? '';
+  })
+  selected: string;
 }
 
 export class GradeResultDto {

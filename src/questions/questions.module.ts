@@ -6,6 +6,7 @@ import { QuestionSchema } from './question.schema';
 import { RolesGuard } from 'src/auth/roles.guard';
 import { ResultSchema } from './results.schema';
 import { CommonModule } from 'src/common/common.module';
+import { AiModule } from 'src/ai/ai.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { CommonModule } from 'src/common/common.module';
       { name: 'Result', schema: ResultSchema },
     ]),
     CommonModule,
+    AiModule,
   ],
   controllers: [QuestionsController],
   exports: [QuestionsService],

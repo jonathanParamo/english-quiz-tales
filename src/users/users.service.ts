@@ -2,15 +2,11 @@ import { Injectable, BadRequestException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import * as bcrypt from 'bcrypt';
-import { JwtService } from '@nestjs/jwt';
 import { CreateUserDto } from './dto/create-user.dto';
 
 @Injectable()
 export class UsersService {
-  constructor(
-    @InjectModel('User') private readonly userModel: Model<any>,
-    private readonly jwtService: JwtService,
-  ) {}
+  constructor(@InjectModel('User') private readonly userModel: Model<any>) {}
 
   async create(createUserDto: CreateUserDto): Promise<any> {
     const { password, ...rest } = createUserDto;
@@ -28,42 +24,32 @@ export class UsersService {
     });
 
     const savedUser = await newUser.save();
-
-    const token = this.jwtService.sign({
-      id: savedUser._id,
-      email: savedUser.email,
-      role: savedUser.role,
-    });
-
     const { password: _, ...userWithoutPassword } = savedUser.toObject();
 
-    return { user: userWithoutPassword, token };
+    return { user: userWithoutPassword };
   }
 
   async findById(id: string): Promise<any> {
-    return this.userModel.findById(id).exec();
+    return this.userModel.findById(id).select('-password').exec();
   }
 
   async findByRole(role: string): Promise<any[]> {
-    return this.userModel.find({ role }).exec();
+    return this.userModel.find({ role }).select('-password').exec();
   }
 
-  async isGod(id: string): Promise<boolean> {
+  async isGod(id: string): Promise<{ isGod: boolean }> {
     const user = await this.findById(id);
-    return user?.role === 'god';
+    return { isGod: user?.role === 'god' };
   }
 
   async validateUser(email: string, password: string): Promise<any> {
     const user = await this.userModel.findOne({ email });
-
     if (!user) return null;
 
     const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) return null;
 
-    if (isMatch) {
-      const { password: _, ...userWithoutPassword } = user.toObject();
-      return userWithoutPassword;
-    }
-    return null;
+    const { password: _, ...userWithoutPassword } = user.toObject();
+    return userWithoutPassword;
   }
 }
