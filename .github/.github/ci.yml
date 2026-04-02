@@ -1,0 +1,131 @@
+name: 🚀 CI Pipeline
+
+on:
+  push:
+    branches: ['*']
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: ⬇️ Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🐳 Build Docker image
+        id: docker_build
+        run: docker build -t magic-english-backend .
+
+      - name: 📋 Get commit info
+        if: always()
+        id: commit_info
+        run: |
+          echo "message=$(git log -1 --pretty=%s)" >> $GITHUB_OUTPUT
+          echo "sha_short=$(git rev-parse --short HEAD)"  >> $GITHUB_OUTPUT
+          echo "timestamp=$(date '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_OUTPUT
+
+      - name: ✅ Slack — Success
+        if: success()
+        run: |
+          curl -s -X POST -H 'Content-type: application/json' \
+          --data '{
+            "blocks": [
+              {
+                "type": "header",
+                "text": {
+                  "type": "plain_text",
+                  "text": "✅ BUILD EXITOSO",
+                  "emoji": true
+                }
+              },
+              {
+                "type": "section",
+                "fields": [
+                  { "type": "mrkdwn", "text": "*🌿 Rama:*\n`${{ github.ref_name }}`" },
+                  { "type": "mrkdwn", "text": "*👤 Autor:*\n`${{ github.actor }}`" },
+                  { "type": "mrkdwn", "text": "*📦 Repo:*\n`${{ github.repository }}`" },
+                  { "type": "mrkdwn", "text": "*🔖 Commit:*\n`${{ steps.commit_info.outputs.sha_short }}`" }
+                ]
+              },
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "*💬 Mensaje del commit:*\n>${{ steps.commit_info.outputs.message }}"
+                }
+              },
+              {
+                "type": "context",
+                "elements": [
+                  {
+                    "type": "mrkdwn",
+                    "text": "🕐 ${{ steps.commit_info.outputs.timestamp }}  •  <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|Ver ejecución>"
+                  }
+                ]
+              },
+              { "type": "divider" }
+            ]
+          }' \
+          ${{ secrets.SLACK_WEBHOOK }}
+
+      - name: ❌ Slack — Failure
+        if: failure()
+        run: |
+          curl -s -X POST -H 'Content-type: application/json' \
+          --data '{
+            "blocks": [
+              {
+                "type": "header",
+                "text": {
+                  "type": "plain_text",
+                  "text": "🔥 BUILD FALLIDO — Atención requerida",
+                  "emoji": true
+                }
+              },
+              {
+                "type": "section",
+                "fields": [
+                  { "type": "mrkdwn", "text": "*🌿 Rama:*\n`${{ github.ref_name }}`" },
+                  { "type": "mrkdwn", "text": "*👤 Responsable:*\n`${{ github.actor }}`" },
+                  { "type": "mrkdwn", "text": "*📦 Repo:*\n`${{ github.repository }}`" },
+                  { "type": "mrkdwn", "text": "*🔖 Commit:*\n`${{ steps.commit_info.outputs.sha_short }}`" }
+                ]
+              },
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "*💬 Cambio que causó el fallo:*\n>${{ steps.commit_info.outputs.message }}"
+                }
+              },
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "*🔍 Paso fallido:* `${{ steps.docker_build.outcome == '\''failure'\'' && '\''🐳 Build Docker image'\'' || '\''Ver logs completos'\'' }}`"
+                }
+              },
+              {
+                "type": "actions",
+                "elements": [
+                  {
+                    "type": "button",
+                    "text": { "type": "plain_text", "text": "🔎 Ver logs del error", "emoji": true },
+                    "style": "danger",
+                    "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                  }
+                ]
+              },
+              {
+                "type": "context",
+                "elements": [
+                  {
+                    "type": "mrkdwn",
+                    "text": "🕐 ${{ steps.commit_info.outputs.timestamp }}  •  Run ID: `${{ github.run_id }}`"
+                  }
+                ]
+              },
+              { "type": "divider" }
+            ]
+          }' \
+          ${{ secrets.SLACK_WEBHOOK }}
