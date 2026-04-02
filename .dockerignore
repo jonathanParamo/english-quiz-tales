@@ -1,0 +1,21 @@
+# Entorno (¡muy importante!)
+.env
+.env.*
+
+# Node
+node_modules/
+
+# Git
+.git
+.gitignore
+
+# Logs
+*.log
+
+# Docker mismo
+docker-compose*.yml
+Dockerfile*
+
+# OS
+.DS_Store
+Thumbs.db
