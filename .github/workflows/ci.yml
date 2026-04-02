@@ -21,99 +21,137 @@ jobs:
         id: commit_info
         run: |
           echo "message=$(git log -1 --pretty=%s)" >> $GITHUB_OUTPUT
-          echo "sha_short=$(git rev-parse --short HEAD)"  >> $GITHUB_OUTPUT
+          echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
           echo "timestamp=$(date '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_OUTPUT
 
-      # ---------- SLACK SUCCESS ----------
+      # ─────────────────────────────────────────
+      #  ✅  SLACK — SUCCESS
+      # ─────────────────────────────────────────
       - name: ✅ Slack — Success
         if: success()
         run: |
           curl -s -X POST -H 'Content-type: application/json' \
           --data "{
-            \"blocks\": [
+            \"attachments\": [
               {
-                \"type\": \"header\",
-                \"text\": {
-                  \"type\": \"plain_text\",
-                  \"text\": \"✅ BUILD EXITOSO\",
-                  \"emoji\": true
-                }
-              },
-              {
-                \"type\": \"section\",
-                \"fields\": [
-                  { \"type\": \"mrkdwn\", \"text\": \"*🌿 Rama:*\n\`${{ github.ref_name }}\`\" },
-                  { \"type\": \"mrkdwn\", \"text\": \"*👤 Autor:*\n\`${{ github.actor }}\`\" },
-                  { \"type\": \"mrkdwn\", \"text\": \"*📦 Repo:*\n\`${{ github.repository }}\`\" },
-                  { \"type\": \"mrkdwn\", \"text\": \"*🔖 Commit:*\n\`${{ steps.commit_info.outputs.sha_short }}\`\" }
-                ]
-              },
-              {
-                \"type\": \"context\",
-                \"elements\": [
+                \"color\": \"#2EB67D\",
+                \"blocks\": [
                   {
-                    \"type\": \"mrkdwn\",
-                    \"text\": \"🕐 ${{ steps.commit_info.outputs.timestamp }}  •  <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|Ver ejecución>\"
+                    \"type\": \"section\",
+                    \"text\": {
+                      \"type\": \"mrkdwn\",
+                      \"text\": \"*✅ Build passed successfully*\"
+                    }
+                  },
+                  {
+                    \"type\": \"divider\"
+                  },
+                  {
+                    \"type\": \"section\",
+                    \"fields\": [
+                      { \"type\": \"mrkdwn\", \"text\": \"*📦 Repository*\n<${{ github.server_url }}/${{ github.repository }}|${{ github.repository }}>\" },
+                      { \"type\": \"mrkdwn\", \"text\": \"*🌿 Branch*\n\`${{ github.ref_name }}\`\" },
+                      { \"type\": \"mrkdwn\", \"text\": \"*👤 Author*\n\`${{ github.actor }}\`\" },
+                      { \"type\": \"mrkdwn\", \"text\": \"*🔖 Commit*\n<${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}|\`${{ steps.commit_info.outputs.sha_short }}\`>\" }
+                    ]
+                  },
+                  {
+                    \"type\": \"section\",
+                    \"text\": {
+                      \"type\": \"mrkdwn\",
+                      \"text\": \"*💬 Commit message*\n> ${{ steps.commit_info.outputs.message }}\"
+                    }
+                  },
+                  {
+                    \"type\": \"actions\",
+                    \"elements\": [
+                      {
+                        \"type\": \"button\",
+                        \"text\": { \"type\": \"plain_text\", \"text\": \"🔍 View Run\", \"emoji\": true },
+                        \"style\": \"primary\",
+                        \"url\": \"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\"
+                      },
+                      {
+                        \"type\": \"button\",
+                        \"text\": { \"type\": \"plain_text\", \"text\": \"📂 View Commit\", \"emoji\": true },
+                        \"url\": \"${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}\"
+                      }
+                    ]
+                  },
+                  {
+                    \"type\": \"context\",
+                    \"elements\": [
+                      { \"type\": \"mrkdwn\", \"text\": \"🕐 ${{ steps.commit_info.outputs.timestamp }}\" }
+                    ]
                   }
                 ]
-              },
-              { \"type\": \"divider\" }
+              }
             ]
           }" \
           ${{ secrets.SLACK_WEBHOOK }}
 
-      # ---------- SLACK FAILURE ----------
+      # ─────────────────────────────────────────
+      #  ❌  SLACK — FAILURE
+      # ─────────────────────────────────────────
       - name: ❌ Slack — Failure
         if: failure()
         run: |
           curl -s -X POST -H 'Content-type: application/json' \
           --data "{
-            \"blocks\": [
+            \"attachments\": [
               {
-                \"type\": \"header\",
-                \"text\": {
-                  \"type\": \"plain_text\",
-                  \"text\": \"🔥 BUILD FALLIDO — Atención requerida\",
-                  \"emoji\": true
-                }
-              },
-              {
-                \"type\": \"section\",
-                \"fields\": [
-                  { \"type\": \"mrkdwn\", \"text\": \"*🌿 Rama:*\n\`${{ github.ref_name }}\`\" },
-                  { \"type\": \"mrkdwn\", \"text\": \"*👤 Responsable:*\n\`${{ github.actor }}\`\" },
-                  { \"type\": \"mrkdwn\", \"text\": \"*📦 Repo:*\n\`${{ github.repository }}\`\" },
-                  { \"type\": \"mrkdwn\", \"text\": \"*🔖 Commit:*\n\`${{ steps.commit_info.outputs.sha_short }}\`\" }
-                ]
-              },
-              {
-                \"type\": \"section\",
-                \"text\": {
-                  \"type\": \"mrkdwn\",
-                  \"text\": \"*💬 Cambio que causó el fallo:*\n>${{ steps.commit_info.outputs.message }}\"
-                }
-              },
-              {
-                \"type\": \"actions\",
-                \"elements\": [
+                \"color\": \"#E01E5A\",
+                \"blocks\": [
                   {
-                    \"type\": \"button\",
-                    \"text\": { \"type\": \"plain_text\", \"text\": \"🔎 Ver logs del error\", \"emoji\": true },
-                    \"style\": \"danger\",
-                    \"url\": \"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\"
+                    \"type\": \"section\",
+                    \"text\": {
+                      \"type\": \"mrkdwn\",
+                      \"text\": \"*❌ Build failed — Attention required*\"
+                    }
+                  },
+                  {
+                    \"type\": \"divider\"
+                  },
+                  {
+                    \"type\": \"section\",
+                    \"fields\": [
+                      { \"type\": \"mrkdwn\", \"text\": \"*📦 Repository*\n<${{ github.server_url }}/${{ github.repository }}|${{ github.repository }}>\" },
+                      { \"type\": \"mrkdwn\", \"text\": \"*🌿 Branch*\n\`${{ github.ref_name }}\`\" },
+                      { \"type\": \"mrkdwn\", \"text\": \"*👤 Responsible*\n\`${{ github.actor }}\`\" },
+                      { \"type\": \"mrkdwn\", \"text\": \"*🔖 Commit*\n<${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}|\`${{ steps.commit_info.outputs.sha_short }}\`>\" }
+                    ]
+                  },
+                  {
+                    \"type\": \"section\",
+                    \"text\": {
+                      \"type\": \"mrkdwn\",
+                      \"text\": \"*💬 Commit that caused the failure*\n> ${{ steps.commit_info.outputs.message }}\"
+                    }
+                  },
+                  {
+                    \"type\": \"actions\",
+                    \"elements\": [
+                      {
+                        \"type\": \"button\",
+                        \"text\": { \"type\": \"plain_text\", \"text\": \"🔎 View Logs\", \"emoji\": true },
+                        \"style\": \"danger\",
+                        \"url\": \"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\"
+                      },
+                      {
+                        \"type\": \"button\",
+                        \"text\": { \"type\": \"plain_text\", \"text\": \"📂 View Commit\", \"emoji\": true },
+                        \"url\": \"${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}\"
+                      }
+                    ]
+                  },
+                  {
+                    \"type\": \"context\",
+                    \"elements\": [
+                      { \"type\": \"mrkdwn\", \"text\": \"🕐 ${{ steps.commit_info.outputs.timestamp }}  •  Run ID: \`${{ github.run_id }}\`\" }
+                    ]
                   }
                 ]
-              },
-              {
-                \"type\": \"context\",
-                \"elements\": [
-                  {
-                    \"type\": \"mrkdwn\",
-                    \"text\": \"🕐 ${{ steps.commit_info.outputs.timestamp }}  •  Run ID: \`${{ github.run_id }}\`\"
-                  }
-                ]
-              },
-              { \"type\": \"divider\" }
+              }
             ]
           }" \
           ${{ secrets.SLACK_WEBHOOK }}
