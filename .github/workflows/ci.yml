@@ -51,7 +51,7 @@ jobs:
                 "type": "section",
                 "text": {
                   "type": "mrkdwn",
-                  "text": "*💬 Mensaje del commit:*\n>${{ steps.commit_info.outputs.message }}"
+                  "text": "*🔍 Paso fallido:* 🐳 Build Docker image — Ver logs completos"
                 }
               },
               {
