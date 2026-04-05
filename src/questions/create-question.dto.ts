@@ -20,9 +20,6 @@ export class AnswerDto {
   selected: string;
 }
 
-// ✅ FIX 3: 'write_sentence' agregado — estaba en el QuestionSchema pero no aquí.
-// Esto causaba que preguntas de tipo write_sentence fueran rechazadas por el DTO
-// con un error 400 silencioso antes de llegar al service.
 export const QuestionTypes = [
   'multiple',
   'true_false',

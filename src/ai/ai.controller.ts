@@ -1,10 +1,9 @@
-import { Controller, Post, Body, UseGuards } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Req } from '@nestjs/common';
 import { AiService } from './ai.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 
-// Todos los endpoints de IA requieren estar logueado
 @Controller('ai')
 @UseGuards(JwtAuthGuard)
 export class AiController {
@@ -32,29 +31,6 @@ export class AiController {
     );
   }
 
-  // POST /api/v1/ai/feedback
-  // Body: { question, selectedOption, correctAnswer, studentLevel? }
-  // @Post('feedback')
-  // async getFeedback(
-  //   @Body()
-  //   body: {
-  //     question: string;
-  //     selectedOption: string;
-  //     correctAnswer: string;
-  //     studentLevel?: 'beginner' | 'intermediate' | 'advanced';
-  //   },
-  // ) {
-  //   return this.aiService.getFeedback(
-  //     body.question,
-  //     body.selectedOption,
-  //     body.correctAnswer,
-  //     body.studentLevel ?? 'beginner',
-  //   );
-  // }
-
-  // POST /api/v1/ai/generate-questions
-  // Solo god y creator pueden generar preguntas
-  // Body: { storyTitle, storyText, level, count? }
   @Post('generate-questions')
   @UseGuards(RolesGuard)
   @Roles('god', 'creator')
@@ -73,6 +49,23 @@ export class AiController {
       body.level,
       body.count ?? 5,
     );
+  }
+
+  @Post('chat')
+  async chat(
+    @Req() req: Request,
+    @Body()
+    body: {
+      messages: { role: 'user' | 'assistant'; content: string }[];
+      progress?: {
+        totalResults: number;
+        avgScore: number;
+        recentMistakes: string[];
+        level: string;
+      };
+    },
+  ) {
+    return this.aiService.chat(body.messages, body.progress);
   }
 
   // POST /api/v1/ai/explain
