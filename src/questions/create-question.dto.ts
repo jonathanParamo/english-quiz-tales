@@ -10,14 +10,14 @@ import {
 
 export class AnswerDto {
   @IsMongoId()
-  questionId: string;
+  questionId!: string;
 
   @IsString()
   @Transform(({ value }) => {
     if (Array.isArray(value)) return value.join(',');
     return value ?? '';
   })
-  selected: string;
+  selected!: string;
 }
 
 export const QuestionTypes = [
@@ -27,7 +27,7 @@ export const QuestionTypes = [
   'listening',
   'matching',
   'choose_correct_sentence',
-  'write_sentence', // ✅ agregado
+  'write_sentence',
 ] as const;
 
 export class CreateQuestionDto {
@@ -36,7 +36,7 @@ export class CreateQuestionDto {
   storyId?: string;
 
   @IsIn(QuestionTypes)
-  type: string;
+  type!: string;
 
   @IsArray()
   @IsOptional()
@@ -84,5 +84,5 @@ export class CreateQuestionDto {
   audioUrl?: string;
 
   @IsString()
-  question: string;
+  question!: string;
 }

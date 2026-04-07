@@ -80,7 +80,7 @@ export class QuestionsController {
       let audioUrl: string | null = null;
 
       if (audioFile) {
-        audioUrl = await uploadAudioToCloudinary(audioFile);
+        audioUrl = await this.imageKitService.uploadAudio(audioFile);
       } else {
       }
 
@@ -105,6 +105,7 @@ export class QuestionsController {
     @Body() questions: any[],
   ) {
     const questionsWithStoryId = questions.map((q) => ({ ...q, storyId }));
+
     return this.questionsService.createMany(questionsWithStoryId);
   }
 
