@@ -9,6 +9,7 @@ import { QuestionsModule } from './questions/questions.module';
 import { AuthModule } from './auth/auth.module';
 import { AnswerModule } from './answer/answer.module';
 import { AiModule } from './ai/ai.module';
+import { PhrasePairsModule } from './phrase-pairs/phrase-pairs.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { AiModule } from './ai/ai.module';
     AuthModule,
     AnswerModule,
     AiModule,
+    PhrasePairsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

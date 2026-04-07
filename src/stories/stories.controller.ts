@@ -126,7 +126,6 @@ export class StoriesController {
       const savedStory = await this.storiesService.create(storyData);
       return savedStory;
     } catch (error) {
-      console.error('Error al crear historia:', error);
       throw new InternalServerErrorException('No se pudo crear la historia');
     }
   }
