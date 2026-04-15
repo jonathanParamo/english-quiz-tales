@@ -36,4 +36,15 @@ export class ImageKitService {
 
     return result.url;
   }
+
+  async uploadVideo(
+    file: Express.Multer.File,
+  ): Promise<{ url: string; fileId: string }> {
+    const result = await this.imagekit.upload({
+      file: file.buffer,
+      fileName: file.originalname,
+      folder: '/videos',
+    });
+    return { url: result.url, fileId: result.fileId };
+  }
 }

@@ -433,6 +433,152 @@ Give a level ${hintLevel} hint.`;
         "Hey! I'm having a little trouble right now. Try again in a sec!",
     };
   }
+
+  async parseDocumentContent(
+    rawText: string,
+    parsed: any,
+  ): Promise<{
+    contentType: 'verbs' | 'vocabulary' | 'story' | 'mixed';
+    title: string;
+    summary: string;
+    verbs: {
+      infinitive: string;
+      pastSimple: string;
+      pastParticiple: string;
+      spanish: string;
+      example: string;
+    }[];
+    vocabulary: {
+      word: string;
+      type: string;
+      definition: string;
+      spanish: string;
+      example: string;
+    }[];
+    paragraphs: string[];
+  }> {
+    const system = `You are a language learning content analyzer.
+Analyze the provided text and detect what type of content it is, then extract structured data.
+
+Content types:
+- "verbs": if the text is primarily a list of English verbs (regular or irregular)
+- "vocabulary": if the text is primarily a vocabulary/word list with definitions
+- "story": if the text is a story, passage, or article
+- "mixed": if it contains a mix of the above
+
+Rules:
+- For "verbs": fill the verbs array with each verb entry. If past simple or participle are missing, infer them if you know them, otherwise leave empty string.
+- For "vocabulary": fill the vocabulary array. Infer the Spanish translation if not provided.
+- For "story" or "mixed": split the text into clean paragraphs (array of strings, each paragraph a string). Also extract any verbs/vocabulary that appear highlighted or listed separately.
+- Always generate a short title (max 6 words) summarizing what the document is about.
+- Always write a brief summary (2-3 sentences) describing the content.
+- The "spanish" field is always the Spanish translation of the word.
+
+Respond ONLY with valid JSON, no markdown, no explanation:
+{
+  "contentType": "verbs|vocabulary|story|mixed",
+  "title": "...",
+  "summary": "...",
+  "verbs": [...],
+  "vocabulary": [...],
+  "paragraphs": [...]
+}`;
+
+    const userInput = `
+RAW TEXT:
+${rawText}
+
+PARSED DATA (may contain errors, improve it):
+${JSON.stringify(parsed, null, 2)}
+
+Instructions:
+- Use BOTH the raw text and parsed data
+- Fix parsing mistakes
+- Complete missing fields
+- Improve examples
+- Detect more verbs and vocabulary
+- Do NOT lose information from raw text
+`;
+
+    const raw = await this.callGemini(system, userInput);
+
+    try {
+      const clean = raw.replace(/```json|```/g, '').trim();
+      return JSON.parse(clean);
+    } catch {
+      return {
+        contentType: 'story',
+        title: 'Uploaded Document',
+        summary: rawText.slice(0, 200),
+        verbs: [],
+        vocabulary: [],
+        paragraphs: rawText
+          .split('\n')
+          .map((p) => p.trim())
+          .filter((p) => p.length > 10),
+      };
+    }
+  }
+
+  async reviewWriting(
+    userText: string,
+    targetWords: string[],
+    documentContext: string,
+  ): Promise<{
+    score: number;
+    usedWords: string[];
+    missedWords: string[];
+    corrections: { original: string; suggestion: string; reason: string }[];
+    summary: string;
+    encouragement: string;
+  }> {
+    const system = `You are a friendly English writing coach for language learners.
+      Review the student's text and provide detailed feedback.
+
+      Evaluate:
+      1. Grammar and spelling errors — list each one with a suggestion and short reason.
+      2. Which target words from the list the student used correctly.
+      3. Which target words from the list were NOT used.
+      4. An overall score from 0 to 100 based on: grammar accuracy (40%), use of target vocabulary (40%), and natural sentence flow (20%).
+      5. A 2-sentence summary of their writing quality.
+      6. One sentence of genuine encouragement personalized to their performance.
+
+      Respond ONLY with valid JSON, no markdown:
+      {
+        "score": 78,
+        "usedWords": ["ran", "written"],
+        "missedWords": ["spoken", "gone"],
+        "corrections": [
+          {
+            "original": "She go to school",
+            "suggestion": "She went to school",
+            "reason": "Use past tense 'went' for past events."
+          }
+        ],
+        "summary": "...",
+        "encouragement": "..."
+      }`;
+
+    const userMessage = `Target words from the document: ${targetWords.slice(0, 30).join(', ')}
+      Document context: "${documentContext.slice(0, 300)}"
+      Student's text: "${userText}"`;
+
+    const raw = await this.callGemini(system, userMessage);
+
+    try {
+      const clean = raw.replace(/```json|```/g, '').trim();
+      return JSON.parse(clean);
+    } catch {
+      return {
+        score: 0,
+        usedWords: [],
+        missedWords: targetWords.slice(0, 5),
+        corrections: [],
+        summary: 'Could not analyze the text. Please try again.',
+        encouragement: 'Keep writing! Practice makes perfect.',
+      };
+    }
+  }
 }
 
 export interface GeneratedQuestion {

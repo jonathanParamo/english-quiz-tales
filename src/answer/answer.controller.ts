@@ -11,9 +11,6 @@ import { AnswerService } from './answer.service';
 import { SubmitAnswerDto } from './dto/submit-answer.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
-// ✅ FIX: ahora llama a submitAnswer() en vez de gradeAnswer() (que fue eliminado por duplicado)
-// ✅ Se agregaron los endpoints de consulta que ya existían en el servicio pero no tenían rutas
-
 @Controller('answers')
 @UseGuards(JwtAuthGuard)
 export class AnswerController {
