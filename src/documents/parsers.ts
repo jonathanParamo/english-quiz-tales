@@ -56,7 +56,6 @@ export class TextParserService {
         continue;
       }
 
-      // 🧠 todo lo demás = párrafo
       paragraphs.push(line);
     }
 

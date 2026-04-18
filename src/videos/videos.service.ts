@@ -87,17 +87,13 @@ export class VideosService {
         originalName,
       );
 
-      // ✅ Si hay letra oficial, alinear timestamps de Whisper con texto correcto
       const alignedSegments = lyrics
         ? this.lyricsAligner.align(whisperResult.segments, lyrics)
         : whisperResult.segments;
 
-      // Generar blanks FIJOS con difficulty=medium como base.
-      // Se guardan en DB y no cambian — son la fuente de verdad.
       const transcript = this.clozeService.generateCloze(
         alignedSegments,
         'medium',
-        'write', // write para que no genere options en DB (se añaden en runtime)
       );
 
       await this.videoModel.findByIdAndUpdate(videoId, {
@@ -135,13 +131,6 @@ export class VideosService {
       .exec();
   }
 
-  /**
-   * Devuelve el transcript para el player.
-   *
-   * Los blanks (wordIndex, word, displayText) vienen fijos de DB.
-   * Solo se regeneran las `options` para modo select (distractores aleatorios).
-   * El texto de cada segmento es siempre la letra oficial.
-   */
   async getTranscriptForPlayer(
     id: string,
     difficulty: Difficulty = 'medium',
@@ -153,20 +142,16 @@ export class VideosService {
       return { status: video.status, transcript: null };
     }
 
-    // Filtrar blanks según difficulty
-    // easy → ~15% de blanks, medium → ~30%, hard → todos los blanks guardados
     const filteredSegments = this.filterByDifficulty(
       video.transcript,
       difficulty,
     );
 
-    // Añadir options solo en modo select
     const withOptions =
       mode === 'select'
         ? this.clozeService.addSelectOptions(filteredSegments)
         : filteredSegments;
 
-    // Safe transcript — NUNCA incluir `word` al cliente
     const safeTranscript = withOptions.map((seg) => ({
       start: seg.start,
       end: seg.end,
@@ -181,14 +166,6 @@ export class VideosService {
     return { status: 'ready', transcript: safeTranscript };
   }
 
-  /**
-   * Filtra los blanks de cada segmento según la dificultad pedida.
-   * Los blanks están ordenados por wordIndex — tomamos un subconjunto.
-   *
-   * hard   → todos los blanks guardados en DB
-   * medium → 60% de los blanks (redondeado arriba, mínimo 1 si hay alguno)
-   * easy   → 30% de los blanks (redondeado arriba, mínimo 1 si hay alguno)
-   */
   private filterByDifficulty(
     segments: NonNullable<VideoDocument['transcript']>,
     difficulty: Difficulty,

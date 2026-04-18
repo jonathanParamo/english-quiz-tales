@@ -85,4 +85,30 @@ export class AiController {
       body.studentLevel ?? 'beginner',
     );
   }
+
+  // POST /api/v1/ai/evaluate-dictation
+  // Body: { originalText, userText }
+  @Post('evaluate-dictation')
+  async evaluateDictation(
+    @Body()
+    body: {
+      originalText: string;
+      userText: string;
+    },
+  ) {
+    return this.aiService.evaluateDictation(body.originalText, body.userText);
+  }
+
+  // POST /api/v1/ai/evaluate-shadowing
+  // Body: { originalText, spokenText }
+  @Post('evaluate-shadowing')
+  async evaluateShadowing(
+    @Body()
+    body: {
+      originalText: string;
+      spokenText: string;
+    },
+  ) {
+    return this.aiService.evaluateShadowing(body.originalText, body.spokenText);
+  }
 }

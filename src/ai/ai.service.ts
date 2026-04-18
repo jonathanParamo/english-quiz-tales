@@ -468,12 +468,12 @@ Content types:
 
 Rules:
 - For "verbs": fill the verbs array with each verb entry. If past simple or participle are missing, infer them if you know them, otherwise leave empty string.
-- For "vocabulary": fill the vocabulary array. Infer the Spanish translation if not provided.
+- Always generate at least one simple English sentence as "example" for each verb, using any of its forms.
+- For "vocabulary": fill the vocabulary array. Infer the Spanish translation if not provided. Always generate one simple English sentence as "example" using the word.
 - For "story" or "mixed": split the text into clean paragraphs (array of strings, each paragraph a string). Also extract any verbs/vocabulary that appear highlighted or listed separately.
 - Always generate a short title (max 6 words) summarizing what the document is about.
 - Always write a brief summary (2-3 sentences) describing the content.
 - The "spanish" field is always the Spanish translation of the word.
-
 Respond ONLY with valid JSON, no markdown, no explanation:
 {
   "contentType": "verbs|vocabulary|story|mixed",
@@ -578,6 +578,282 @@ Instructions:
         encouragement: 'Keep writing! Practice makes perfect.',
       };
     }
+  }
+  /**
+   * Evalúa el dictado: compara lo que el usuario escribió vs el texto original.
+   * Tolera errores menores de ortografía y puntuación.
+   */
+  async evaluateDictation(
+    originalText: string,
+    userText: string,
+  ): Promise<{
+    score: number;
+    accuracy: number;
+    wordsCorrect: number;
+    wordsTotal: number;
+    errors: {
+      original: string;
+      typed: string;
+      type: 'spelling' | 'missing' | 'extra' | 'wrong';
+    }[];
+    feedback: string;
+    encouragement: string;
+  }> {
+    // Evaluación local rápida (sin IA) para score base
+    const localResult = this.evaluateDictationLocally(originalText, userText);
+
+    // Si el score es perfecto o casi perfecto, no gastamos tokens de IA
+    if (localResult.accuracy >= 95) {
+      return {
+        ...localResult,
+        feedback: 'Excellent! Almost perfect dictation.',
+        encouragement: 'Your listening and spelling are on point!',
+      };
+    }
+
+    const system = `You are an English dictation evaluator for language learners.
+Compare the original text with what the student typed.
+Be tolerant with minor punctuation and capitalization differences — those are NOT errors.
+Focus on: missing words, extra words, wrong words, and spelling mistakes.
+
+Respond ONLY with valid JSON, no markdown:
+{
+  "errors": [
+    { "original": "word", "typed": "wrod", "type": "spelling" },
+    { "original": "quickly", "typed": "", "type": "missing" },
+    { "original": "", "typed": "the", "type": "extra" },
+    { "original": "run", "typed": "ran", "type": "wrong" }
+  ],
+  "feedback": "2-sentence summary of the student's performance",
+  "encouragement": "1 short encouraging sentence"
+}`;
+
+    const userMessage = `Original text: "${originalText}"
+Student typed: "${userText}"
+
+Identify only real errors (ignore punctuation and capitalization differences).`;
+
+    const raw = await this.callGemini(system, userMessage);
+
+    try {
+      const clean = raw.replace(/```json|```/g, '').trim();
+      const aiResult = JSON.parse(clean);
+      return {
+        ...localResult,
+        errors: aiResult.errors ?? localResult.errors,
+        feedback: aiResult.feedback ?? 'Good effort!',
+        encouragement: aiResult.encouragement ?? 'Keep practicing!',
+      };
+    } catch {
+      return {
+        ...localResult,
+        feedback: `You got ${localResult.wordsCorrect} out of ${localResult.wordsTotal} words right.`,
+        encouragement: 'Keep listening and practicing!',
+      };
+    }
+  }
+
+  /**
+   * Evaluación local de dictado — sin IA, para score base y fallback.
+   */
+  private evaluateDictationLocally(originalText: string, userText: string) {
+    const normalize = (t: string) =>
+      t
+        .toLowerCase()
+        .replace(/[.,!?;:'"()\-]/g, '')
+        .trim();
+
+    const originalWords = normalize(originalText).split(/\s+/).filter(Boolean);
+    const userWords = normalize(userText).split(/\s+/).filter(Boolean);
+
+    let correct = 0;
+    const errors: {
+      original: string;
+      typed: string;
+      type: 'spelling' | 'missing' | 'extra' | 'wrong';
+    }[] = [];
+
+    const maxLen = Math.max(originalWords.length, userWords.length);
+
+    for (let i = 0; i < originalWords.length; i++) {
+      const orig = originalWords[i];
+      const typed = userWords[i] ?? '';
+
+      if (!typed) {
+        errors.push({ original: orig, typed: '', type: 'missing' });
+      } else if (orig === typed) {
+        correct++;
+      } else if (this.levenshtein(orig, typed) <= 2) {
+        // Typo tolerable — cuenta como casi correcto pero registra error
+        correct += 0.5;
+        errors.push({ original: orig, typed, type: 'spelling' });
+      } else {
+        errors.push({ original: orig, typed, type: 'wrong' });
+      }
+    }
+
+    // Palabras extra que el usuario escribió de más
+    for (let i = originalWords.length; i < userWords.length; i++) {
+      errors.push({ original: '', typed: userWords[i], type: 'extra' });
+    }
+
+    const accuracy =
+      originalWords.length > 0
+        ? Math.round((correct / originalWords.length) * 100)
+        : 0;
+
+    return {
+      score: accuracy,
+      accuracy,
+      wordsCorrect: Math.round(correct),
+      wordsTotal: originalWords.length,
+      errors,
+      feedback: '',
+      encouragement: '',
+    };
+  }
+
+  /**
+   * Distancia de Levenshtein para detectar typos tolerables.
+   */
+  private levenshtein(a: string, b: string): number {
+    const m = a.length,
+      n = b.length;
+    const dp: number[][] = Array.from({ length: m + 1 }, (_, i) =>
+      Array.from({ length: n + 1 }, (_, j) => (i === 0 ? j : j === 0 ? i : 0)),
+    );
+    for (let i = 1; i <= m; i++) {
+      for (let j = 1; j <= n; j++) {
+        dp[i][j] =
+          a[i - 1] === b[j - 1]
+            ? dp[i - 1][j - 1]
+            : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+      }
+    }
+    return dp[m][n];
+  }
+
+  /**
+   * Evalúa el shadowing: compara lo que el usuario dijo (transcripción del SpeechRecognition)
+   * con el texto original que debía repetir.
+   */
+  async evaluateShadowing(
+    originalText: string,
+    spokenText: string,
+  ): Promise<{
+    score: number;
+    accuracy: number;
+    wordsCorrect: number;
+    wordsTotal: number;
+    missedWords: string[];
+    mispronounced: { expected: string; heard: string }[];
+    feedback: string;
+    tip: string;
+  }> {
+    const localResult = this.evaluateShadowingLocally(originalText, spokenText);
+
+    if (localResult.accuracy >= 90) {
+      return {
+        ...localResult,
+        feedback: 'Great pronunciation! You nailed it.',
+        tip: 'Try increasing the speed for more challenge.',
+      };
+    }
+
+    const system = `You are an English pronunciation coach evaluating a shadowing exercise.
+      The student listened to a sentence and repeated it out loud.
+      The speech recognition captured what they said.
+
+      Compare and identify:
+      1. Words they clearly mispronounced (speech recognition heard something different)
+      2. Words they skipped entirely
+      3. Give ONE specific, actionable pronunciation tip based on the main error pattern
+
+      Keep feedback encouraging and practical.
+      Respond ONLY with valid JSON, no markdown:
+      {
+        "mispronounced": [
+          { "expected": "thought", "heard": "taught" }
+        ],
+        "feedback": "You got most words right! Focus on the 'th' sound.",
+        "tip": "Practice the 'th' sound by placing your tongue between your teeth."
+      }`;
+
+    const userMessage = `Original sentence: "${originalText}"
+      Speech recognition heard: "${spokenText}"`;
+
+    const raw = await this.callGemini(system, userMessage);
+
+    try {
+      const clean = raw.replace(/```json|```/g, '').trim();
+      const aiResult = JSON.parse(clean);
+      return {
+        ...localResult,
+        mispronounced: aiResult.mispronounced ?? localResult.mispronounced,
+        feedback:
+          aiResult.feedback ??
+          `You got ${localResult.wordsCorrect}/${localResult.wordsTotal} words.`,
+        tip: aiResult.tip ?? 'Keep practicing out loud!',
+      };
+    } catch {
+      return {
+        ...localResult,
+        feedback: `You got ${localResult.wordsCorrect} out of ${localResult.wordsTotal} words.`,
+        tip: 'Keep practicing out loud!',
+      };
+    }
+  }
+
+  /**
+   * Evaluación local de shadowing — sin IA.
+   */
+  private evaluateShadowingLocally(originalText: string, spokenText: string) {
+    const normalize = (t: string) =>
+      t
+        .toLowerCase()
+        .replace(/[.,!?;:'"()\-]/g, '')
+        .trim();
+
+    const originalWords = normalize(originalText).split(/\s+/).filter(Boolean);
+    const spokenWords = normalize(spokenText).split(/\s+/).filter(Boolean);
+    const spokenSet = new Set(spokenWords);
+
+    let correct = 0;
+    const missedWords: string[] = [];
+    const mispronounced: { expected: string; heard: string }[] = [];
+
+    for (const word of originalWords) {
+      if (spokenSet.has(word)) {
+        correct++;
+      } else {
+        // Buscar si hay una palabra parecida (posible error de pronunciación capturado por STT)
+        const close = spokenWords.find(
+          (sw) => this.levenshtein(word, sw) <= 2 && sw.length > 2,
+        );
+        if (close) {
+          correct += 0.5;
+          mispronounced.push({ expected: word, heard: close });
+        } else {
+          missedWords.push(word);
+        }
+      }
+    }
+
+    const accuracy =
+      originalWords.length > 0
+        ? Math.round((correct / originalWords.length) * 100)
+        : 0;
+
+    return {
+      score: accuracy,
+      accuracy,
+      wordsCorrect: Math.round(correct),
+      wordsTotal: originalWords.length,
+      missedWords,
+      mispronounced,
+      feedback: '',
+      tip: '',
+    };
   }
 }
 
