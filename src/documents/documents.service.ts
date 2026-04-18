@@ -49,7 +49,6 @@ export class DocumentsService {
         'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
       mimetype === 'application/msword'
     ) {
-      // mammoth: npm i mammoth
       const mammoth = require('mammoth');
       const result = await mammoth.extractRawText({ buffer });
       return result.value?.trim() ?? '';
