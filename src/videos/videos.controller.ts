@@ -2,6 +2,7 @@ import {
   Controller,
   Post,
   Get,
+  Patch,
   Param,
   Body,
   Query,
@@ -55,7 +56,6 @@ export class VideosController {
   async uploadVideo(
     @UploadedFile() file: Express.Multer.File,
     @Body('title') title: string,
-    // ✅ Letra oficial opcional — si se omite, se usa el texto de Whisper
     @Body('lyrics') lyrics?: string,
   ) {
     if (!file) throw new BadRequestException('No se recibió ningún archivo');
@@ -97,6 +97,7 @@ export class VideosController {
       videoUrl: video.videoUrl,
       status: video.status,
       language: video.language,
+      userSummary: video.userSummary ?? null,
     };
   }
 
@@ -137,5 +138,18 @@ export class VideosController {
       body.blankIndex,
       body.answer,
     );
+  }
+
+  @Patch(':id/summary')
+  async updateSummary(
+    @Param('id') id: string,
+    @Body('summary') summary: string,
+  ) {
+    if (typeof summary !== 'string') {
+      throw new BadRequestException('El campo summary debe ser un string');
+    }
+
+    const clean = summary.trim().slice(0, 1000);
+    return this.videosService.updateUserSummary(id, clean || null);
   }
 }

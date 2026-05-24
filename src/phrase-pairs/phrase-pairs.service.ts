@@ -30,11 +30,17 @@ export class PhrasePairsService {
     level?: string;
     category?: string;
     type?: string;
+    userRole?: string;
   }): Promise<PhrasePair[]> {
     const query: Record<string, any> = {};
     if (filters?.level) query.level = filters.level;
     if (filters?.category) query.category = filters.category;
     if (filters?.type) query.type = filters.type;
+
+    if (filters?.userRole !== 'god') {
+      query.category = { $ne: 'gothic' };
+    }
+
     return this.phrasePairModel.find(query).sort({ createdAt: -1 }).exec();
   }
 
@@ -52,11 +58,16 @@ export class PhrasePairsService {
     level?: string,
     category?: string,
     type?: string,
+    userRole?: string,
   ): Promise<PhrasePair[]> {
     const match: Record<string, any> = {};
     if (level) match.level = level;
     if (category) match.category = category;
     if (type) match.type = type;
+
+    if (userRole !== 'god') {
+      match.category = { $ne: 'gothic' };
+    }
 
     return this.phrasePairModel.aggregate([
       { $match: match },
@@ -65,9 +76,15 @@ export class PhrasePairsService {
   }
 
   // ── Listar todas las categorías disponibles (para selector en UI) ────
-  async getCategories(level?: string): Promise<string[]> {
-    const match: Record<string, any> = { category: { $ne: null } };
+  async getCategories(level?: string, userRole?: string): Promise<string[]> {
+    const match: Record<string, any> = {};
     if (level) match.level = level;
+
+    if (userRole !== 'god') {
+      match.category = { $nin: [null, 'gothic'] };
+    } else {
+      match.category = { $ne: null };
+    }
 
     const result = await this.phrasePairModel.aggregate([
       { $match: match },

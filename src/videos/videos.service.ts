@@ -44,6 +44,7 @@ export class VideosService {
           language: existing.language,
           transcript: existing.transcript,
           lyrics: lyrics ?? existing.lyrics,
+          userSummary: null,
           status: 'ready',
         });
       }
@@ -58,6 +59,7 @@ export class VideosService {
       status: 'pending',
       transcript: null,
       lyrics: lyrics ?? null,
+      userSummary: null,
       contentHash,
     });
 
@@ -211,5 +213,18 @@ export class VideosService {
     const correct = normalize(userAnswer) === normalize(blank.word);
 
     return { correct, correctWord: blank.word };
+  }
+
+  async updateUserSummary(
+    videoId: string,
+    summary: string | null,
+  ): Promise<{ id: string; userSummary: string | null }> {
+    const video = await this.findById(videoId);
+
+    await this.videoModel.findByIdAndUpdate(videoId, {
+      userSummary: summary,
+    });
+
+    return { id: video._id.toString(), userSummary: summary };
   }
 }

@@ -8,15 +8,15 @@ export type VideoDocument = Video &
 
 export class BlankWord {
   wordIndex!: number;
-  word!: string; // la palabra correcta (nunca se envía al cliente)
-  displayText!: string; // texto del segmento con la palabra reemplazada por ____
-  options?: string[]; // solo en mode=select
+  word!: string;
+  displayText!: string;
+  options?: string[];
 }
 
 export class TranscriptSegment {
   start!: number;
   end!: number;
-  text!: string; // letra oficial (no Whisper)
+  text!: string;
   blanks!: BlankWord[];
 }
 
@@ -34,13 +34,12 @@ export class Video {
   @Prop({ default: 'en' })
   language!: string;
 
-  // ✅ Letra oficial pegada por el admin — fuente de verdad para el texto
-  // ✅ Tipo explícito
   @Prop({ type: String, default: null })
   lyrics!: string | null;
 
-  // transcript guarda solo start/end/text (letra oficial) + blanks base (medium/write)
-  // Los blanks se regeneran en runtime; el texto NO cambia nunca
+  @Prop({ type: String, default: null })
+  userSummary!: string | null;
+
   @Prop({ type: [Object], default: null })
   transcript!: TranscriptSegment[] | null;
 

@@ -12,6 +12,8 @@ import {
   UseInterceptors,
   BadRequestException,
   ParseIntPipe,
+  ForbiddenException,
+  Req,
 } from '@nestjs/common';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { PhrasePairsService } from './phrase-pairs.service';
@@ -34,7 +36,7 @@ export class PhrasePairsController {
   ) {}
 
   // ── POST /phrase-pairs ────────────────────────────────────────────────
-  // Crea un par individual con audios e imagen opcionales.
+  // individual con audios e imagen opcionales.
   @Post()
   @Roles('god')
   @UseGuards(RolesGuard)
@@ -105,17 +107,25 @@ export class PhrasePairsController {
   // ── GET /phrase-pairs ─────────────────────────────────────────────────
   @Get()
   async findAll(
+    @Req() req: any,
     @Query('level') level?: string,
     @Query('category') category?: string,
     @Query('type') type?: string,
   ) {
-    return this.phrasePairsService.findAll({ level, category, type });
+    const userRole = (req.user as any)?.role;
+
+    if (category === 'gothic' && userRole !== 'god') {
+      throw new ForbiddenException('No tienes acceso a esta categoría.');
+    }
+
+    return this.phrasePairsService.findAll({ level, category, type, userRole });
   }
 
   // ── GET /phrase-pairs/categories ──────────────────────────────────────
   @Get('categories')
-  async getCategories(@Query('level') level?: string) {
-    return this.phrasePairsService.getCategories(level);
+  async getCategories(@Req() req: any, @Query('level') level?: string) {
+    const userRole = (req.user as any)?.role;
+    return this.phrasePairsService.getCategories(level, userRole);
   }
 
   // ── GET /phrase-pairs/stats ───────────────────────────────────────────
@@ -129,6 +139,7 @@ export class PhrasePairsController {
   // ── GET /phrase-pairs/random/:limit ───────────────────────────────────
   @Get('random/:limit')
   async getRandom(
+    @Req() req: any,
     @Param('limit', ParseIntPipe) limit: number,
     @Query('level') level?: string,
     @Query('category') category?: string,
@@ -137,7 +148,20 @@ export class PhrasePairsController {
     if (limit < 1 || limit > 100) {
       throw new BadRequestException('El límite debe estar entre 1 y 100.');
     }
-    return this.phrasePairsService.getRandom(limit, level, category, type);
+
+    const userRole = (req.user as any)?.role;
+
+    if (category === 'gothic' && userRole !== 'god') {
+      throw new ForbiddenException('No tienes acceso a esta categoría.');
+    }
+
+    return this.phrasePairsService.getRandom(
+      limit,
+      level,
+      category,
+      type,
+      userRole,
+    );
   }
 
   // ── GET /phrase-pairs/:id ─────────────────────────────────────────────
